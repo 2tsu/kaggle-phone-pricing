@@ -9,7 +9,10 @@ import seaborn as sns
 from sklearn.feature_selection import RFE
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import RobustScaler, PolynomialFeatures
-
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import scipy.cluster.hierarchy as sch
+import seaborn as sns
+import matplotlib.pyplot as plt
 def extract_camera_info(camera_str):
     rear_cameras = re.findall(r'(\d+) MP', camera_str.split('&')[0])
     front_camera = re.search(r'(\d+) MP Front', camera_str)
@@ -42,6 +45,7 @@ class DataSet:
         self.df = pd.read_csv('./data/data.csv')
         self.feature_vector = self.setup_features(self.df)
 
+    #欠損値の処理
     def setup_features(self, df):
         # 'No_of_sim' カラムから各技術のサポート情報を抽出
         df['Dual_Sim'] = df['No_of_sim'].apply(lambda x: 1 if 'Dual Sim' in x else 0)
@@ -79,10 +83,21 @@ class DataSet:
         # 'fast_charging' をバイナリ変換
         df['fast_charging'] = df['fast_charging'].str.extract('(\d+)').fillna(0).astype(int)
         
-        # 'Screen_resolution' から幅と高さを抽出し、NaN を 0 で埋める
-        df['Screen_width'] = df['Screen_resolution'].str.extract('(\d+) x \d+').fillna(0).astype(int)
-        df['Screen_height'] = df['Screen_resolution'].str.extract('\d+ x (\d+)').fillna(0).astype(int)
-        # 元の 'Screen_resolution' カラムを削除
+        # 'Screen_resolution' から幅と高さを抽出し、
+        #　新しいcolumnとして幅と高さの積を画面面積として追加
+        # 'Screen_resolution' 列から幅と高さを抽出する関数を定義
+        def extract_dimensions(resolution):
+            match = re.search(r'(\d+)\s*x\s*(\d+)', resolution)
+            if match:
+                width, height = match.groups()
+                return int(width), int(height)
+            else:
+                return None,  None      # 幅と高さを新しい列に追加
+        df[['Screen_width', 'Screen_height']] = df['Screen_resolution'].fillna("").apply(lambda x: pd.Series(extract_dimensions(x)))
+
+        # 幅と高さの積を計算して 'Screen_area' 列を追加
+        df['Screen_area'] = df['Screen_width'] * df['Screen_height'] 
+        # 元の 'Screen_resolution' 列を削除
         df = df.drop(columns=['Screen_resolution'])
         
         # 'Processor' からクロック速度を抽出し、NaN を 0 で埋める
@@ -105,6 +120,7 @@ class DataSet:
         
         # 'Price' カラムを数値に変換
         df['Price'] = df['Price'].str.replace(',', '').str.extract('(\d+\.?\d*)').astype(float)
+        
         return df
 
 def eval_score(y_test, y_pred):
@@ -114,7 +130,7 @@ def eval_score(y_test, y_pred):
 
 def train(df):
     # 特徴量とターゲットの分割
-    X = df.drop(columns=['Price', 'Unnamed: 0', 'Name', 'Android_version', 'Processor_name'])
+    X = df.drop(columns=['Price'])
     y = df['Price']
 
     # データのトレーニングセットとテストセットへの分割
@@ -127,22 +143,53 @@ def train(df):
     # テストセットで予測
     y_pred = model.predict(X_test)
     
-    # モデルの評価
-    mse, r2 = eval_score(y_test, y_pred)
-    print(f'Mean Squared Error: {mse}')
-    print(f'R^2 Score: {r2}')
+    return y_test, y_pred, model
 
 
-    
-    
+a = DataSet()
+a.feature_vector.info()
+fv = a.feature_vector
+fv.drop(columns=['Unnamed: 0', 'Name', 'Android_version', 'Processor_name'], inplace=True)
+fv.columns
+
+# 各列の欠損値の数と割合をサマライズ
+nan_summary = fv.isna().sum().to_frame('NaN Count')
+nan_summary['NaN Percentage'] = (fv.isna().mean() * 100).to_frame('NaN Percentage')
+
+# NaNが含まれる列のみ表示
+nan_summary = nan_summary[nan_summary['NaN Count'] > 0]
+
+print(nan_summary)
+# 欠損値を含む行を削除
+fv = fv.dropna()
+
+fv = fv.drop(columns=["4G"])
+drop_company = ["company_Coolpad","company_IQOO","company_Itel","company_Gionee" , "company_LG"]
+fv =fv.drop(columns=drop_company)
+
+X = fv.drop(columns=['Price'])
+y = fv['Price']
+y_test, y_pred, model = train(fv)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+eval_score( y_test, y_pred)
 
 if __name__ == "__main__":
+    #0.805061556872748
     data = DataSet()
     df = data.feature_vector
     
     # 欠損値を持つ行を削除
     df = df.dropna()
+    # 分位数の計算（PRICE列の95%分位数を取得）
+    price_threshold = fv['Price'].quantile(0.95)
 
+    # 外れ値の除外（PRICE列が95%分位数を超えるデータを除外）
+    fv = fv[fv['Price'] <= price_threshold]
+
+    #意味のない列を削除
+    df = df.drop(columns=["4G"])
+    drop_company = ["company_Coolpad","company_IQOO","company_Itel","company_Gionee" , "company_LG"]
+    df = df.drop(columns=drop_company)
     # 特徴量とターゲットの分割
     X = df.drop(columns=['Price', 'Unnamed: 0', 'Name', 'Android_version', 'Processor_name'])
     y = df['Price']
@@ -159,8 +206,20 @@ if __name__ == "__main__":
     
     # モデルの評価
     mse, r2 = eval_score(y_test, y_pred)
-    print(f'Mean Squared Error: {mse}')
-    print(f'R^2 Score: {r2}')
+
+    # 訓練データのスコア
+    train_score = model.score(X_train, y_train)
+
+    # テストデータのスコア
+    test_score = model.score(X_test, y_test)
+
+    print(f'Train R2 score: {train_score}')
+    print(f'Test R2 score: {test_score}')
+
+
+    cv_scores = cross_val_score(model, X, y, cv=5)
+    print(f'Cross-validation scores: {cv_scores}')
+    print(f'Mean cross-validation score: {cv_scores.mean()}')
 
     # 特徴量の重要性を棒グラフで表示
     # 特徴量の重要性を確認
@@ -179,7 +238,7 @@ if __name__ == "__main__":
     plt.ylabel('Coefficient', fontsize=15)
 
     # Save the figure in high quality
-    plt.savefig('data/feature_importance.png', dpi=300)
+    plt.savefig('./out/feature_importance.png', dpi=300)
 
     # Show the plot
     #plt.show()
@@ -191,8 +250,55 @@ if __name__ == "__main__":
     plt.ylabel('Value')
     plt.savefig("./out/feature_variance.png")
     #plt.show()
-    """
-    Mean Squared Error: 313939338.06325233
-    R^2 Score: 0.7430100339185934
-    """
     
+    residuals = y_test - y_pred
+    # 残差プロットの作成
+    plt.figure(figsize=(10, 6))
+    sns.residplot(x=y_pred, y=residuals, lowess=True, line_kws={'color': 'red', 'lw': 2})
+    plt.xlabel('Predicted Values')
+    plt.ylabel('Residuals')
+    plt.title('Residual Plot')
+    plt.savefig("./out/residual_plot.png")
+    plt.show()
+    
+    # 予測値と実測値の散布図を作成
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_test, y_pred, alpha=0.5)
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)  # y=x の直線
+    plt.xlabel('Actual Prices')
+    plt.ylabel('Predicted Prices')
+    plt.title('Actual vs Predicted Prices')
+    plt.savefig("./out/actual_vs_predicted_prices.png")
+    plt.show()
+
+    # 相関行列の計算
+    corr = fv.corr()
+
+    # 相関行列の距離行列を計算
+    dist = 1 - corr
+
+    # 階層型クラスタリングを実行
+    linkage = sch.linkage(dist, method='ward')
+
+    # デンドログラムの表示
+    plt.figure(figsize=(10, 7))
+    sch.dendrogram(linkage, labels=corr.columns, leaf_rotation=90)
+    plt.title('Dendrogram')
+    plt.xlabel('Features')
+    plt.ylabel('Euclidean distances')
+    plt.savefig("./out/dendrogram.png")
+    plt.show()
+
+    # クラスタリング結果に基づいて特徴量を並び替える
+    dendro = sch.dendrogram(linkage, labels=corr.columns, no_plot=True)
+    ordered_columns = dendro['ivl']
+
+    # 並び替えた相関行列のヒートマップを表示
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(corr.loc[ordered_columns, ordered_columns], annot=True, cmap='coolwarm', linewidths=0.5, fmt=".2f", annot_kws={"size": 7}, cbar_kws={"shrink": .8})
+    plt.title('Clustered Correlation Matrix')
+    plt.savefig("./out/clustered_correlation_matrix.png")
+    plt.show()
+
+    print(f'Mean Squared Error: {mse}')
+    print(f'R^2 Score: {r2}')
