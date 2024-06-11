@@ -173,6 +173,7 @@ y_test, y_pred, model = train(fv)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 eval_score( y_test, y_pred)
 
+
 if __name__ == "__main__":
     #0.805061556872748
     data = DataSet()
