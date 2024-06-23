@@ -1,11 +1,5 @@
 """
-Wrapper method with forward selection
-SUMMARY:
-R2 train: 0.769
-R2 test: 0.751
-Cross-validation scores: [0.775 0.699 0.54  0.637 0.607]
-average score: 0.649
-number of features: 22
+p-value > 0.05 の特徴量を削除する前進選択ラッパー法
 """
 
 

@@ -2,10 +2,7 @@
 WARNING UNDER DEVL
 重回帰
 ランダムフォレストを用いて特徴量を削除するラッパー法
-
-R2 train: 0.459
-R2 test: 0.445
-Cross-validation scores: [0.451 0.424 0.491 0.328 0.43 ]
+開発中
 """
 
 from kaggel_phonepricing.features import DataSet

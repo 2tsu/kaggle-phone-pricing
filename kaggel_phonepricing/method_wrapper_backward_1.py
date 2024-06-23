@@ -1,12 +1,6 @@
 """
 重回帰
 p-value > 0.05 の特徴量を削除するラッパー法
-SUMMARY
-R2 train:  0.772
-R2 test:  0.752
-Cross-validation scores:  [0.782 0.73  0.574 0.645 0.608]
-average score:  0.668
-number of features:  22
 """
 
 from kaggel_phonepricing.features import DataSet
