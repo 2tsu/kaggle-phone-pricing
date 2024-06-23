@@ -45,8 +45,23 @@ class DataSet:
         self.df = pd.read_csv('./data/data.csv')
         self.feature_vector = self.setup_features(self.df)
 
+        #drop na
+        self.feature_vector = self.feature_vector.dropna()
+        
+        #delte outlier with isolatuon forest
+        from sklearn.ensemble import IsolationForest
+        iso = IsolationForest(contamination=0.1, random_state=42)
+        yhat = iso.fit_predict(self.feature_vector)
+        mask = yhat != -1
+        self.feature_vector_inliers = self.feature_vector[mask]
+        
+        self.data = self.feature_vector_inliers.drop(columns=['Price'])
+        self.target = self.feature_vector_inliers['Price']
+
     #欠損値の処理
     def setup_features(self, df):
+        """特徴量エンジニアリングを行う."""
+        
         # 'No_of_sim' カラムから各技術のサポート情報を抽出
         df['Dual_Sim'] = df['No_of_sim'].apply(lambda x: 1 if 'Dual Sim' in x else 0)
         df['3G'] = df['No_of_sim'].apply(lambda x: 1 if '3G' in x else 0)
@@ -55,6 +70,7 @@ class DataSet:
         df['VoLTE'] = df['No_of_sim'].apply(lambda x: 1 if 'VoLTE' in x else 0)
         # 元の 'No_of_sim' カラムを削除
         df = df.drop(columns=['No_of_sim'])
+        
         # 'Ram' カラムから数値を抽出
         df['Ram'] = df['Ram'].str.extract('(\d+)').astype(int)
         
@@ -113,13 +129,19 @@ class DataSet:
                     return 0
             else:
                 return row['Processor_speed_GHz']
-        
         df['Processor_speed_GHz'] = df.apply(set_default_speed, axis=1)
         # 元の 'Processor' カラムを削除
         df = df.drop(columns=['Processor'])
         
         # 'Price' カラムを数値に変換
         df['Price'] = df['Price'].str.replace(',', '').str.extract('(\d+\.?\d*)').astype(float)
+        
+        #他の不要カラムを削除
+        df = df.drop(columns=['Unnamed: 0', 'Name', 'Android_version', 'Processor_name'])
+        
+        #型変換
+        bool_columns = df.select_dtypes(include=['bool']).columns
+        df[bool_columns] = df[bool_columns].astype(int)
         
         return df
 
