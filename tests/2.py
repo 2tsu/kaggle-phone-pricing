@@ -47,6 +47,10 @@ class DataSet:
 
     #欠損値の処理
     def setup_features(self, df):
+        """
+        特徴量エンジニアリングを行う.
+        """
+        
         # 'No_of_sim' カラムから各技術のサポート情報を抽出
         df['Dual_Sim'] = df['No_of_sim'].apply(lambda x: 1 if 'Dual Sim' in x else 0)
         df['3G'] = df['No_of_sim'].apply(lambda x: 1 if '3G' in x else 0)
@@ -55,33 +59,44 @@ class DataSet:
         df['VoLTE'] = df['No_of_sim'].apply(lambda x: 1 if 'VoLTE' in x else 0)
         # 元の 'No_of_sim' カラムを削除
         df = df.drop(columns=['No_of_sim'])
+        
+        
         # 'Ram' カラムから数値を抽出
         df['Ram'] = df['Ram'].str.extract('(\d+)').astype(int)
+        
         
         # 'Battery' カラムから数値を抽出
         df['Battery'] = df['Battery'].str.extract('(\d+)').astype(int)
         
+        
         # 'Display' カラムから数値を抽出
         df['Display'] = df['Display'].str.extract('(\d+\.\d+)').astype(float)
         
+        
         # 'Camera' カラムから背面と前面カメラのMPを抽出
         df[['Max_Rear_Camera_MP', 'Front_Camera_MP']] = df['Camera'].apply(lambda x: pd.Series(extract_camera_info(x)))
+        
         #元データ消去
         df = df.drop(columns=['Camera'])
+        
         
         # 'External_Memory' カラムから外部メモリのサポート情報と最大容量を抽出
         df[['External_Memory_Supported', 'External_Memory_Max_Capacity']] = df['External_Memory'].apply(lambda x: pd.Series(extract_external_memory_info(x)))
         #元データ消去
         df = df.drop(columns=['External_Memory'])
         
+        
         # 'company' カラムのワンホットエンコーディング
         df = pd.get_dummies(df, columns=['company'])
+        
         
         # 'Inbuilt_memory' カラムから数値を抽出
         df['Inbuilt_memory'] = df['Inbuilt_memory'].str.extract('(\d+)').fillna(0).astype(int)
         
+        
         # 'fast_charging' をバイナリ変換
         df['fast_charging'] = df['fast_charging'].str.extract('(\d+)').fillna(0).astype(int)
+        
         
         # 'Screen_resolution' から幅と高さを抽出し、
         #　新しいcolumnとして幅と高さの積を画面面積として追加
@@ -100,8 +115,10 @@ class DataSet:
         # 元の 'Screen_resolution' 列を削除
         df = df.drop(columns=['Screen_resolution'])
         
+        
         # 'Processor' からクロック速度を抽出し、NaN を 0 で埋める
         df['Processor_speed_GHz'] = df['Processor'].str.extract('(\d+\.?\d*) GHz').astype(float)
+        
         
         # 'Processor' カラムからクロック速度がない場合の処理
         # 'Octa Core' の場合は任意でクロック速度を設定 (例えば 2.0 GHz)
@@ -118,9 +135,13 @@ class DataSet:
         # 元の 'Processor' カラムを削除
         df = df.drop(columns=['Processor'])
         
+        
         # 'Price' カラムを数値に変換
         df['Price'] = df['Price'].str.replace(',', '').str.extract('(\d+\.?\d*)').astype(float)
         
+        
+        #他の不要なカラムを消去
+        df.drop(columns=['Unnamed: 0', 'Name', 'Android_version', 'Processor_name'], inplace=True)
         return df
 
 def eval_score(y_test, y_pred):
@@ -146,41 +167,14 @@ def train(df):
     return y_test, y_pred, model
 
 
-a = DataSet()
-a.feature_vector.info()
-fv = a.feature_vector
-fv.drop(columns=['Unnamed: 0', 'Name', 'Android_version', 'Processor_name'], inplace=True)
-fv.columns
-
-# 各列の欠損値の数と割合をサマライズ
-nan_summary = fv.isna().sum().to_frame('NaN Count')
-nan_summary['NaN Percentage'] = (fv.isna().mean() * 100).to_frame('NaN Percentage')
-
-# NaNが含まれる列のみ表示
-nan_summary = nan_summary[nan_summary['NaN Count'] > 0]
-
-print(nan_summary)
-# 欠損値を含む行を削除
-fv = fv.dropna()
-
-fv = fv.drop(columns=["4G"])
-drop_company = ["company_Coolpad","company_IQOO","company_Itel","company_Gionee" , "company_LG"]
-fv =fv.drop(columns=drop_company)
-
-X = fv.drop(columns=['Price'])
-y = fv['Price']
-y_test, y_pred, model = train(fv)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-eval_score( y_test, y_pred)
-
 
 if __name__ == "__main__":
     #0.805061556872748
     data = DataSet()
-    df = data.feature_vector
+    fv = data.feature_vector
     
     # 欠損値を持つ行を削除
-    df = df.dropna()
+    fv = fv.dropna()
     # 分位数の計算（PRICE列の95%分位数を取得）
     price_threshold = fv['Price'].quantile(0.95)
 
