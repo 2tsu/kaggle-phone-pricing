@@ -16,14 +16,14 @@ import statsmodels.api as sm
 from sklearn.model_selection import cross_val_score
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 c = DataSet()
 
 scaler = StandardScaler()
-X = pd.DataFrame(scaler.fit_transform(c.data))
+X = pd.DataFrame(scaler.fit_transform(c.data), columns=c.data.columns)
 y = c.target
 
 # インデックスを揃える
@@ -91,3 +91,32 @@ plt.legend(loc='upper left')
 plt.plot([min(y), max(y)], [min(y), max(y)], color='red', lw=2)  # 45度の直線
 plt.title('Actual vs Predicted Values')
 plt.show()
+
+
+# 選択された特徴量でヒートマップの作成
+plt.figure(figsize=(12, 8))
+sns.heatmap(X_train[selected_cols].corr(), cmap="RdBu", annot=True, fmt=".2f")
+plt.title("Heatmap of Selected Features Correlations")
+plt.show()
+
+# ヒストグラムの作成
+X_train[selected_cols].hist(bins=30, figsize=(15, 10))
+plt.suptitle("Histogram of Selected Features", y=1.02)
+plt.show()
+
+# 相関行列ヒートマップの作成
+corr_matrix = X_train[selected_cols].corr()
+plt.figure(figsize=(12, 8))
+sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm")
+plt.title("Correlation Matrix Heatmap of Selected Features")
+plt.show()
+
+# ボックスプロット
+plt.figure(figsize=(15, 10))
+X_train[X.columns.tolist()].boxplot()
+plt.title("Boxplot of Selected Features")
+plt.xticks(ticks=range(1, len(X.columns.tolist()) + 1), rotation=90)
+plt.show()
+
+
+

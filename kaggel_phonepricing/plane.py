@@ -14,8 +14,10 @@ import pandas as pd
 from sklearn.model_selection import cross_val_score
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 c = DataSet()
 
@@ -44,12 +46,6 @@ print("average score:", np.round(np.mean(cv_scores), 3))
 print("number of features:", len(X.columns))
 
 
-# create heatmap
-import seaborn as sns
-import matplotlib.pyplot as plt
-sns.heatmap(X.corr(), cmap="RdBu")
-plt.show()
-
 """
 # 散布図行列
 sns.pairplot(X_train)
@@ -73,9 +69,8 @@ plt.show()
 
 # ボックスプロット
 plt.figure(figsize=(15, 10))
-X_train.boxplot()
-plt.title("Boxplot of Features")
-plt.xticks(rotation=90)
+X_train[X.columns.tolist()].boxplot()
+plt.title("Boxplot of Selected Features")
+plt.xticks(ticks=range(1, len(X.columns.tolist()) + 1), rotation=90)
 plt.show()
-
 

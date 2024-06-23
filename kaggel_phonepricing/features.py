@@ -1,18 +1,12 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import re
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.preprocessing import RobustScaler
-import seaborn as sns
-from sklearn.feature_selection import RFE
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.preprocessing import RobustScaler, PolynomialFeatures
-from statsmodels.stats.outliers_influence import variance_inflation_factor
-import scipy.cluster.hierarchy as sch
-import seaborn as sns
-import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import IsolationForest
+
+
 def extract_camera_info(camera_str):
     rear_cameras = re.findall(r'(\d+) MP', camera_str.split('&')[0])
     front_camera = re.search(r'(\d+) MP Front', camera_str)
@@ -49,12 +43,11 @@ class DataSet:
         self.feature_vector = self.feature_vector.dropna()
         
         #delte outlier with isolatuon forest
-        from sklearn.ensemble import IsolationForest
         iso = IsolationForest(contamination=0.1, random_state=42)
         yhat = iso.fit_predict(self.feature_vector)
         mask = yhat != -1
         self.feature_vector_inliers = self.feature_vector[mask]
-        
+        self.cols = self.feature_vector.columns.tolist()
         self.data = self.feature_vector_inliers.drop(columns=['Price'])
         self.target = self.feature_vector_inliers['Price']
 
