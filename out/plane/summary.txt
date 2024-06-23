@@ -1,0 +1,6 @@
+R2 train: 0.772
+R2 test: 0.752
+Cross-validation scores: [ 7.63000000e-01 -5.87444135e+23 -2.07306409e+22 -1.01902267e+23
+  6.09000000e-01]
+average score: -1.4201540846171841e+23
+number of features: 46

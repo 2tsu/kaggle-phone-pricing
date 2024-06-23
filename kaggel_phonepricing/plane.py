@@ -45,6 +45,13 @@ print("Cross-validation scores:", np.round(cv_scores, 3))
 print("average score:", np.round(np.mean(cv_scores), 3))
 print("number of features:", len(X.columns))
 
+#write summary
+with open("./out/plane/summary.txt", "w") as f:
+    f.write("R2 train: " + str(np.round(model.score(X_train,y_train), 3)) + "\n")
+    f.write("R2 test: " + str(np.round(model.score(X_test,y_test), 3)) + "\n")
+    f.write("Cross-validation scores: " + str(np.round(cv_scores, 3)) + "\n")
+    f.write("average score: " + str(np.round(np.mean(cv_scores), 3)) + "\n")
+    f.write("number of features: " + str(len(X.columns)) + "\n")
 
 """
 # 散布図行列
@@ -56,6 +63,7 @@ plt.show()
 # ヒストグラム
 X_train.hist(bins=30, figsize=(15, 10))
 plt.suptitle("Histogram of Features", y=1.02)
+plt.savefig("./out/plane/histogram.png")
 plt.show()
 
 
@@ -64,6 +72,7 @@ corr_matrix = X_train.corr()
 plt.figure(figsize=(12, 8))
 sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm")
 plt.title("Correlation Matrix Heatmap")
+plt.savefig("./out/plane/heatmap.png")
 plt.show()
 
 
@@ -72,5 +81,6 @@ plt.figure(figsize=(15, 10))
 X_train[X.columns.tolist()].boxplot()
 plt.title("Boxplot of Selected Features")
 plt.xticks(ticks=range(1, len(X.columns.tolist()) + 1), rotation=90)
+plt.savefig("./out/plane/boxplot.png")
 plt.show()
 

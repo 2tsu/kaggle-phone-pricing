@@ -66,6 +66,16 @@ print("R2 test: ", np.round(model.score(X_test, y_test), 3))
 print("Cross-validation scores: ", np.round(cv_scores, 3))
 print("average score: ", np.round(np.mean(cv_scores), 3))
 print("number of features: ", len(selected_cols))
+
+#write summary
+with open('./out/wrapper_backward_1/summary.txt', 'w') as f:
+    f.write("SUMMARY\n")
+    f.write("R2 train: {}\n".format(np.round(model.score(X_train, y_train), 3)))
+    f.write("R2 test: {}\n".format(np.round(model.score(X_test, y_test), 3)))
+    f.write("Cross-validation scores: {}\n".format(np.round(cv_scores, 3)))
+    f.write("average score: {}\n".format(np.round(np.mean(cv_scores), 3)))
+    f.write("number of features: {}\n".format(len(selected_cols)))
+
 # 予測
 y_train_pred = model.predict(X_train)
 y_test_pred = model.predict(X_test)
@@ -79,6 +89,7 @@ plt.ylabel('Residuals')
 plt.legend(loc='upper left')
 plt.hlines(y=0, xmin=min(y_train_pred), xmax=max(y_train_pred), color='red')
 plt.title('Residuals Plot')
+plt.savefig('./out/wrapper_backward_1/residuals_plot.png')
 plt.show()
 
 # 実際の値 vs 予測値プロットの作成
@@ -90,6 +101,7 @@ plt.ylabel('Predicted values')
 plt.legend(loc='upper left')
 plt.plot([min(y), max(y)], [min(y), max(y)], color='red', lw=2)  # 45度の直線
 plt.title('Actual vs Predicted Values')
+plt.savefig('./out/wrapper_backward_1/actual_vs_predicted.png')
 plt.show()
 
 
@@ -97,11 +109,13 @@ plt.show()
 plt.figure(figsize=(12, 8))
 sns.heatmap(X_train[selected_cols].corr(), cmap="RdBu", annot=True, fmt=".2f")
 plt.title("Heatmap of Selected Features Correlations")
+plt.savefig('./out/wrapper_backward_1/heatmap.png')
 plt.show()
 
 # ヒストグラムの作成
 X_train[selected_cols].hist(bins=30, figsize=(15, 10))
 plt.suptitle("Histogram of Selected Features", y=1.02)
+plt.savefig('./out/wrapper_backward_1/histogram.png')
 plt.show()
 
 # 相関行列ヒートマップの作成
@@ -109,6 +123,7 @@ corr_matrix = X_train[selected_cols].corr()
 plt.figure(figsize=(12, 8))
 sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm")
 plt.title("Correlation Matrix Heatmap of Selected Features")
+plt.savefig('./out/wrapper_backward_1/correlation_matrix.png')
 plt.show()
 
 # ボックスプロット
@@ -116,6 +131,7 @@ plt.figure(figsize=(15, 10))
 X_train[X.columns.tolist()].boxplot()
 plt.title("Boxplot of Selected Features")
 plt.xticks(ticks=range(1, len(X.columns.tolist()) + 1), rotation=90)
+plt.savefig('./out/wrapper_backward_1/boxplot.png')
 plt.show()
 
 
